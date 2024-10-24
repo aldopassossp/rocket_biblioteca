@@ -1,97 +1,101 @@
 package com.biblioteca.dao;
 
-import com.biblioteca.conexao.Database;
 import com.biblioteca.model.Livro;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class LivroDAO {
+    private Connection connection;
 
-    public List<Livro> listarLivrosDisponiveis() {
+    public LivroDAO(Connection connection) {
+        this.connection = connection;
+    }
+
+    // Metodo para salvar um novo livro
+    public void salvar(Livro livro) throws SQLException {
+        String sql = "INSERT INTO livro (titulo, autor_id, disponivel) VALUES (?, ?, ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, livro.getTitulo());
+            stmt.setInt(2, livro.getAutorId());
+            stmt.setBoolean(3, livro.isDisponivel());
+            stmt.executeUpdate();
+
+            // Obter o ID gerado automaticamente
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    livro.setId(generatedKeys.getInt(1));
+                }
+            }
+        }
+    }
+
+    // Metodo para buscar livro por ID
+    public Livro buscarPorId(int id) throws SQLException {
+        String sql = "SELECT * FROM livro WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Livro livro = new Livro();
+                    livro.setId(rs.getInt("id"));
+                    livro.setTitulo(rs.getString("titulo"));
+                    livro.setAutorId(rs.getInt("autor_id"));
+                    livro.setDisponivel(rs.getBoolean("disponivel"));
+                    return livro;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Metodo para listar todos os livros
+    public List<Livro> listarTodos() throws SQLException {
+        String sql = "SELECT l.*, a.nome AS nomeAutor FROM livro l LEFT JOIN autor a ON l.autor_id = a.id";
         List<Livro> livros = new ArrayList<>();
-        String sql = "SELECT * FROM livros WHERE disponivel = true";
-
-        try (Connection conn = Database.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 Livro livro = new Livro();
                 livro.setId(rs.getInt("id"));
                 livro.setTitulo(rs.getString("titulo"));
-                livro.setAutor(rs.getString("autor"));
+                livro.setAutorId(rs.getInt("autor_id"));
+                livro.setNomeAutor(rs.getString("nomeAutor"));
+                livro.setDisponivel(rs.getBoolean("disponivel"));
                 livros.add(livro);
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-
         return livros;
     }
 
-    public void cadastrarLivro(Livro livro) {
-        String sql = "INSERT INTO livros (titulo, autor, disponivel) VALUES (?, ?, true)";
-
-        try (Connection conn = Database.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, livro.getTitulo());
-            stmt.setString(2, livro.getAutor());
+    // Metodo para atualizar a disponibilidade do livro
+    public void atualizarDisponibilidade(int livroId, boolean disponivel) throws SQLException {
+        String sql = "UPDATE livro SET disponivel = ? WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setBoolean(1, disponivel);
+            stmt.setInt(2, livroId);
             stmt.executeUpdate();
-
-            System.out.println("Livro cadastrado com sucesso!");
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
-    public void alterarLivro(Livro livro) {
-        String sql = "UPDATE livros SET titulo = ?, autor = ? WHERE id = ?";
-
-        try (Connection conn = Database.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+    // Metodo para atualizar um livro
+    public void atualizar(Livro livro) throws SQLException {
+        String sql = "UPDATE livro SET titulo = ?, autor_id = ?, disponivel = ? WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, livro.getTitulo());
-            stmt.setString(2, livro.getAutor());
-            stmt.setInt(3, livro.getId());
-            int affectedRows = stmt.executeUpdate();
-
-            if (affectedRows > 0) {
-                System.out.println("Livro alterado com sucesso!");
-            } else {
-                System.out.println("Livro não encontrado.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+            stmt.setInt(2, livro.getAutorId());
+            stmt.setBoolean(3, livro.isDisponivel());
+            stmt.setInt(4, livro.getId());
+            stmt.executeUpdate();
         }
     }
 
-    public void removerLivro(int livroId) {
-        String sql = "DELETE FROM livros WHERE id = ?";
-
-        try (Connection conn = Database.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, livroId);
-            int affectedRows = stmt.executeUpdate();
-
-            if (affectedRows > 0) {
-                System.out.println("Livro removido com sucesso!");
-            } else {
-                System.out.println("Livro não encontrado.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+    // Metodo para deletar um livro
+    public void deletar(int id) throws SQLException {
+        String sql = "DELETE FROM livro WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
         }
     }
-
 }
