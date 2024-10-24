@@ -59,6 +59,9 @@ public class BibliotecaApplication {
 					case 8:
 						cadastrarUsuario(usuarioDAO, scanner);
 						break;
+					case 9:
+						cadastrarAutor(autorDAO, scanner);
+						break;
 					case 0:
 						System.out.println("Saindo do sistema...");
 						return;
@@ -81,6 +84,7 @@ public class BibliotecaApplication {
 		System.out.println("6. Buscar livro por título ou autor");
 		System.out.println("7. Cadastrar livro");
 		System.out.println("8. Cadastrar usuário");
+		System.out.println("9. Cadastrar autor");
 		System.out.println("0. Sair");
 		System.out.print("Escolha uma opção: ");
 	}
@@ -173,15 +177,22 @@ public class BibliotecaApplication {
 
 	private static void cadastrarLivro(LivroDAO livroDAO, AutorDAO autorDAO, Scanner scanner) throws SQLException {
 		System.out.println("---- Cadastrar Livro ----");
-		System.out.print("Título do livro: ");
-		String titulo = scanner.nextLine();
 
-		System.out.println("Autores disponíveis:");
+		// Verifica se há autores cadastrados
 		List<Autor> autores = autorDAO.listarTodos();
+		if (autores.isEmpty()) {
+			System.out.println("Nenhum autor cadastrado. Por favor, cadastre um autor antes de cadastrar um livro.");
+			return; // Redireciona para o menu principal
+		}
+
+		// Exibe a lista de autores disponíveis
+		System.out.println("Autores disponíveis:");
 		for (Autor autor : autores) {
 			System.out.printf("ID: %d, Nome: %s%n", autor.getId(), autor.getNome());
 		}
 
+		System.out.print("Título do livro: ");
+		String titulo = scanner.nextLine();
 		System.out.print("Informe o ID do autor: ");
 		int autorId = scanner.nextInt();
 		scanner.nextLine(); // Consome a nova linha
@@ -194,6 +205,7 @@ public class BibliotecaApplication {
 		livroDAO.salvar(livro);
 		System.out.println("Livro cadastrado com sucesso!");
 	}
+
 
 	private static void cadastrarUsuario(UsuarioDAO usuarioDAO, Scanner scanner) throws SQLException {
 		System.out.println("---- Cadastrar Usuário ----");
@@ -211,5 +223,20 @@ public class BibliotecaApplication {
 
 		usuarioDAO.salvar(usuario);
 		System.out.println("Usuário cadastrado com sucesso!");
+	}
+
+	private static void cadastrarAutor(AutorDAO autorDAO, Scanner scanner) throws SQLException {
+		System.out.println("---- Cadastrar Autor ----");
+		System.out.print("Nome: ");
+		String nome = scanner.nextLine();
+		System.out.print("Data de Nascimento (YYYY-MM-DD): ");
+		LocalDate dataNascimento = LocalDate.parse(scanner.nextLine());
+
+		Autor autor = new Autor();
+		autor.setNome(nome);
+		autor.setDataNascimento(dataNascimento);
+
+		autorDAO.salvar(autor);
+		System.out.println("Autor cadastrado com sucesso!");
 	}
 }
